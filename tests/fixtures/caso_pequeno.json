@@ -1,0 +1,42 @@
+{
+  "descripcion": "Caso pequeno calculado a mano y revisado. Cuatro vehiculos, dos surtidores, horizonte 12.5 minutos. El primer vehiculo ocupa el surtidor 0 durante mucho tiempo, de modo que las dos politicas asignan el vehiculo 2 a surtidores distintos y producen esperas distintas con exactamente las mismas entradas. La politica de filas independientes ademas produce un servicio que termina despues del cierre (fin 13.0 > 12.5), lo que ejercita el recorte de la utilizacion al horizonte.",
+  "derivacion": "Ver docs/modelo.md, seccion 'Caso conocido'. Los valores no provienen de ejecutar el motor: se derivaron aplicando las reglas a mano y se comprobaron aparte con aritmetica independiente.",
+  "entrada": {
+    "llegadas": [1.0, 1.5, 2.0, 2.5],
+    "servicios": [10.0, 2.0, 2.0, 1.0],
+    "surtidores": 2,
+    "horizonte": 12.5
+  },
+  "esperado": {
+    "unica": {
+      "registros": [
+        {"id": 0, "llegada": 1.0, "duracion_servicio": 10.0, "surtidor": 0, "inicio": 1.0, "fin": 11.0, "espera": 0.0, "permanencia": 10.0},
+        {"id": 1, "llegada": 1.5, "duracion_servicio": 2.0, "surtidor": 1, "inicio": 1.5, "fin": 3.5, "espera": 0.0, "permanencia": 2.0},
+        {"id": 2, "llegada": 2.0, "duracion_servicio": 2.0, "surtidor": 1, "inicio": 3.5, "fin": 5.5, "espera": 1.5, "permanencia": 3.5},
+        {"id": 3, "llegada": 2.5, "duracion_servicio": 1.0, "surtidor": 1, "inicio": 5.5, "fin": 6.5, "espera": 3.0, "permanencia": 4.0}
+      ],
+      "metricas": {
+        "vehiculos_atendidos": 4,
+        "espera_media": 1.125,
+        "proporcion_espera": 0.5,
+        "espera_p95": 2.775,
+        "utilizacion": [0.8, 0.4]
+      }
+    },
+    "independientes": {
+      "registros": [
+        {"id": 0, "llegada": 1.0, "duracion_servicio": 10.0, "surtidor": 0, "inicio": 1.0, "fin": 11.0, "espera": 0.0, "permanencia": 10.0},
+        {"id": 1, "llegada": 1.5, "duracion_servicio": 2.0, "surtidor": 1, "inicio": 1.5, "fin": 3.5, "espera": 0.0, "permanencia": 2.0},
+        {"id": 2, "llegada": 2.0, "duracion_servicio": 2.0, "surtidor": 0, "inicio": 11.0, "fin": 13.0, "espera": 9.0, "permanencia": 11.0},
+        {"id": 3, "llegada": 2.5, "duracion_servicio": 1.0, "surtidor": 1, "inicio": 3.5, "fin": 4.5, "espera": 1.0, "permanencia": 2.0}
+      ],
+      "metricas": {
+        "vehiculos_atendidos": 4,
+        "espera_media": 2.5,
+        "proporcion_espera": 0.5,
+        "espera_p95": 7.8,
+        "utilizacion": [0.92, 0.24]
+      }
+    }
+  }
+}

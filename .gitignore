@@ -1,0 +1,28 @@
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Bytecode y cachés de Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Salidas generadas por los scripts.
+# Solo se versiona evidencia seleccionada, agregada a mano con `git add -f`.
+resultados/*
+!resultados/.gitkeep
+
+# Figuras y datos pesados sueltos en la raiz (no afecta tests/fixtures/)
+/*.png
+/*.pdf
+/*.csv
+
+# Editores y sistema operativo
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
