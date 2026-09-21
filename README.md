@@ -19,13 +19,13 @@ Se responden dos preguntas **independientes**:
 | Hito | Estado |
 |---|---|
 | **A — Base:** estructura, contratos, caso conocido | Listo |
-| **B — Trabajo paralelo:** motor, generadores, validación, experimentos | En curso |
+| **B — Trabajo paralelo:** motor, generadores, validación, experimentos | Motor listo; el resto pendiente |
 | **C — Integración** | Pendiente |
 | **D — Evidencia e informe** | Pendiente |
 
-`gasolinera/simulacion.py` está **especificado pero no implementado**. Las
-pruebas de `tests/test_simulacion.py` fallan a propósito: es el paso rojo del
-ciclo TDD acordado. Los módulos de `generadores.py`, `validacion.py`,
+El **motor está terminado y probado**: `gasolinera/contratos.py` y
+`gasolinera/simulacion.py` implementan las dos políticas y las métricas, con
+100 pruebas en verde. Los módulos `generadores.py`, `validacion.py`,
 `experimentos.py` y `visualizacion.py` son marcadores que indican a quién le
 corresponden.
 
@@ -62,8 +62,8 @@ Ejecutar siempre desde la raíz del repositorio.
 # Suite completa
 python -m pytest -q
 
-# Solo lo que ya está terminado (Hito A)
-python -m pytest tests/test_contratos.py -q
+# Solo el motor y sus contratos
+python -m pytest tests/test_contratos.py tests/test_simulacion.py -q
 ```
 
 Los siguientes comandos son **interfaces por implementar**, no herramientas
