@@ -10,7 +10,7 @@ from gasolinera.visualizacion import (
     graficar_espera_media,
     graficar_utilizacion_media,
 )
-from scripts.reporte_html import construir_html
+from scripts.reporte_html import carpeta_generadores_por_omision, construir_html
 
 
 def main() -> None:
@@ -52,13 +52,22 @@ def main() -> None:
     )
 
     # El reporte se arma al final porque incrusta las figuras ya escritas.
+    # Si ya se corrio validar_generadores, su comparacion se incluye sola.
+    generadores = carpeta_generadores_por_omision(carpeta_salida)
+    incluye_generadores = (generadores / "ajuste.csv").is_file()
+
     reporte = carpeta_salida / "reporte.html"
-    reporte.write_text(construir_html(carpeta_salida), encoding="utf-8")
+    reporte.write_text(
+        construir_html(carpeta_salida, generadores if incluye_generadores else None),
+        encoding="utf-8",
+    )
 
     print(f"Experimento terminado: {len(filas)} filas generadas.")
     print(f"Resultados guardados en: {carpeta_salida}")
     print()
     print(f"Reporte visual: {reporte}")
+    if not incluye_generadores:
+        print("  (sin la comparación de generadores; correr scripts.validar_generadores)")
     print(f"Abrirlo con:    ii {reporte}")
 
 

@@ -23,21 +23,23 @@ Se responden dos preguntas **independientes**:
 | **C — Integración** | Listo |
 | **D — Evidencia e informe** | Resultados listos; informe y documentos en curso |
 
-**El código está completo y probado**, con **130 pruebas en verde**. Los cinco
-módulos de `gasolinera/` están implementados y el experimento corre de punta a
-punta en aproximadamente 1.5 segundos.
+**El código está completo y probado**, con **152 pruebas en verde**. Los cinco
+módulos de `gasolinera/` están implementados y las **dos preguntas del proyecto
+tienen evidencia reproducible**: el experimento de filas corre en ~1.5 s y la
+comparación de generadores en ~25 s.
 
 Resultado principal: la **fila única** produce menor espera media y menor
 percentil 95 en los tres niveles de demanda, con intervalos del 95 % que
 excluyen el cero. La utilización promedio es prácticamente igual entre las dos
-políticas, así que **no sirve para compararlas**. Los detalles están en
+políticas, así que **no sirve para compararlas**. Los dos generadores son
+estadísticamente equivalentes y difieren solo en costo. Los detalles están en
 [`docs/Informe_gasolinera_borrador_revisado.md`](docs/Informe_gasolinera_borrador_revisado.md).
 
 ### Pendientes
 
 | Pendiente | Responsable |
 |---|---|
-| `docs/validacion.md` y `scripts/validar_generadores.py` | Diego |
+| `docs/validacion.md` | Diego |
 | Barras de error en las figuras y orden por nivel de demanda | Micaela |
 | `metadatos.json` con versiones y commit; `resumen.csv` con p95 y proporción | Micaela |
 | Trasladar el informe al formato del curso (`docs/Sim.md`) | Todos |
@@ -87,21 +89,28 @@ python -m scripts.ejecutar_experimentos --config configs/escenarios.json --salid
 ii resultados\sistema\reporte.html
 ```
 
-El reporte es **un solo archivo autocontenido**: las figuras van incrustadas y no
-carga nada de internet, así que se abre con doble clic en cualquier computadora y
-sirve para presentar o imprimir a PDF desde el navegador. Para regenerarlo sin
-volver a simular:
-
-```powershell
-python -m scripts.reporte_html --resultados resultados/sistema
-```
-
-El siguiente comando es una **interfaz por implementar** (Persona 3), no una
-herramienta disponible todavía:
+Comparación de los dos métodos de generación, que es la **segunda pregunta** del
+proyecto y es independiente de la comparación de filas. Tarda ~25 s, casi todo en
+el bucle de aceptación-rechazo:
 
 ```powershell
 python -m scripts.validar_generadores --config configs/escenarios.json --salida resultados/generadores
 ```
+
+Genera `ajuste.csv`, `aceptacion.csv`, `rendimiento.csv`, `metadatos.json` y dos
+figuras. **Si esta carpeta existe, el reporte HTML la incluye solo**, así que
+corriendo los dos comandos en orden queda un único archivo con todo:
+
+```powershell
+python -m scripts.ejecutar_experimentos --config configs/escenarios.json --salida resultados/sistema
+python -m scripts.validar_generadores  --config configs/escenarios.json --salida resultados/generadores
+python -m scripts.reporte_html --resultados resultados/sistema
+ii resultados\sistema\reporte.html
+```
+
+El reporte es **un solo archivo autocontenido**: las figuras van incrustadas y no
+carga nada de internet, así que se abre con doble clic en cualquier computadora y
+sirve para presentar o imprimir a PDF desde el navegador.
 
 ## Estructura
 
@@ -115,6 +124,7 @@ gasolinera/
   visualizacion.py  Figuras del informe                          [Persona 4]
 scripts/
   ejecutar_experimentos.py  Corre los escenarios y escribe todo   [Persona 4]
+  validar_generadores.py    Compara inversa contra rechazo        [Persona 3]
   reporte_html.py           Reporte visual autocontenido          [Persona 1]
 configs/            Escenarios                                   [Persona 4]
 tests/              Pruebas y el caso pequeño calculado a mano

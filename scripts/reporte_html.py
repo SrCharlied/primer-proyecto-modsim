@@ -263,8 +263,225 @@ def _fmt_p(p: float | None) -> str:
     return f"{p:.4f}"
 
 
-def construir_html(carpeta: Path) -> str:
-    """Arma el HTML completo a partir de los CSV de una carpeta de resultados."""
+def carpeta_generadores_por_omision(carpeta: Path) -> Path:
+    """Carpeta hermana donde `validar_generadores` deja sus salidas."""
+    return carpeta.parent / "generadores"
+
+
+def _seccion_generadores(carpeta: Path) -> list[str]:
+    """Arma la comparacion de los dos metodos de generacion.
+
+    Devuelve una lista vacia si todavia no se corrio
+    ``scripts.validar_generadores``: el reporte de politicas sigue siendo
+    valido sin esta parte.
+    """
+    ruta_ajuste = carpeta / "ajuste.csv"
+    if not ruta_ajuste.is_file():
+        return []
+
+    ajuste = _leer_csv(ruta_ajuste)
+    aceptacion = (
+        _leer_csv(carpeta / "aceptacion.csv")
+        if (carpeta / "aceptacion.csv").is_file()
+        else []
+    )
+    rendimiento = (
+        _leer_csv(carpeta / "rendimiento.csv")
+        if (carpeta / "rendimiento.csv").is_file()
+        else []
+    )
+
+    partes: list[str] = [
+        "<h2>Comparación de los métodos de generación</h2>",
+        "<p>Esta es la <strong>segunda pregunta del proyecto</strong>, independiente de "
+        "la comparación de filas: transformada inversa contra aceptación-rechazo sobre la "
+        "misma distribución objetivo. La política de filas no interviene aquí.</p>",
+    ]
+
+    # --- KPIs ---
+    rechazos = sum(1 for f in ajuste if str(f.get("rechaza_h0", "")).lower() == "true")
+    tarjetas = [
+        f"""<div class="kpi" style="border-left-color:var(--bien)">
+  <div class="etiqueta">Ajuste a la exponencial</div>
+  <div class="valor">{len(ajuste) - rechazos} / {len(ajuste)}</div>
+  <div class="nota">celdas que <em>no</em> rechazan la hipótesis de ajuste</div>
+</div>"""
+    ]
+
+    if aceptacion:
+        observadas = [float(f["tasa_aceptacion_observada"]) for f in aceptacion]
+        uniformes = [float(f["uniformes_por_muestra"]) for f in aceptacion]
+        tarjetas.append(
+            f"""<div class="kpi" style="border-left-color:var(--indep)">
+  <div class="etiqueta">Tasa de aceptación</div>
+  <div class="valor">{np.mean(observadas):.4f}</div>
+  <div class="nota">observada contra 0.5 teórica (1/M)</div>
+</div>"""
+        )
+        tarjetas.append(
+            f"""<div class="kpi" style="border-left-color:var(--indep)">
+  <div class="etiqueta">Uniformes por muestra</div>
+  <div class="valor">{np.mean(uniformes):.2f} vs 1</div>
+  <div class="nota">costo intrínseco del rechazo: unas 4 veces</div>
+</div>"""
+        )
+
+    razon = None
+    if rendimiento:
+        tamanos = sorted({int(f["tamano"]) for f in rendimiento})
+        mayor = tamanos[-1]
+        tiempos = {
+            f["metodo"]: float(f["mediana_s"])
+            for f in rendimiento
+            if int(f["tamano"]) == mayor
+        }
+        if "inversa" in tiempos and "rechazo" in tiempos and tiempos["inversa"] > 0:
+            razon = tiempos["rechazo"] / tiempos["inversa"]
+            tarjetas.append(
+                f"""<div class="kpi" style="border-left-color:var(--unica)">
+  <div class="etiqueta">Tiempo medido</div>
+  <div class="valor">{razon:.0f}&times;</div>
+  <div class="nota">con {mayor:,} muestras; no es el costo del método</div>
+</div>""".replace(",", " ")
+            )
+
+    partes.append(f"<div class='kpis'>{''.join(tarjetas)}</div>")
+
+    # --- Ajuste ---
+    partes.append("<h3>Ajuste a la distribución teórica</h3>")
+    partes.append(
+        "<p>Prueba de Kolmogórov-Smirnov de una muestra con la <strong>tasa fijada de "
+        "antemano</strong>. Si la tasa se estimara de la misma muestra, el p-valor "
+        "estándar no sería válido sin corrección.</p>"
+    )
+    renglones = []
+    for fila in ajuste:
+        rechaza = str(fila.get("rechaza_h0", "")).lower() == "true"
+        renglones.append(
+            f"<tr><td>{fila['metodo']}</td>"
+            f"<td class='num'>{float(fila['tasa']):g}</td>"
+            f"<td class='num'>{int(float(fila['n']))}</td>"
+            f"<td class='num'>{float(fila['media_observada']):.4f}</td>"
+            f"<td class='num'>{float(fila['media_teorica']):.4f}</td>"
+            f"<td class='num'>{float(fila['ks_estadistico']):.5f}</td>"
+            f"<td class='num'>{float(fila['p_valor']):.4f}</td>"
+            f"<td class='num'>{'rechaza' if rechaza else 'no rechaza'}</td></tr>"
+        )
+    partes.append(
+        "<div class='tarjeta'><table><thead><tr><th>Método</th><th>Tasa λ</th>"
+        "<th>n</th><th>Media obs.</th><th>Media teórica</th><th>KS</th>"
+        "<th>valor p</th><th>Veredicto</th></tr></thead>"
+        f"<tbody>{''.join(renglones)}</tbody></table>"
+        "<p class='sub' style='margin:10px 0 0;font-size:.85rem'>"
+        "<strong>El p-valor no ordena los métodos.</strong> Todos superan cualquier nivel "
+        "de significancia usual. No rechazar la hipótesis nula no demuestra que el "
+        "generador sea correcto, solo que esa muestra no aporta evidencia en contra."
+        "</p></div>"
+    )
+
+    # --- Aceptacion ---
+    if aceptacion:
+        partes.append("<h3>Tasa de aceptación del método de rechazo</h3>")
+        renglones = []
+        for fila in aceptacion:
+            renglones.append(
+                f"<tr><td class='num'>{float(fila['tasa']):g}</td>"
+                f"<td class='num'>{int(float(fila['muestras_aceptadas']))}</td>"
+                f"<td class='num'>{int(float(fila['candidatos_generados']))}</td>"
+                f"<td class='num mejor'>{float(fila['tasa_aceptacion_observada']):.4f}</td>"
+                f"<td class='num'>{float(fila['tasa_aceptacion_teorica']):.4f}</td>"
+                f"<td class='num'>{float(fila['candidatos_por_muestra']):.3f}</td>"
+                f"<td class='num'><strong>{float(fila['uniformes_por_muestra']):.2f}</strong></td>"
+                "</tr>"
+            )
+        partes.append(
+            "<div class='tarjeta'><table><thead><tr><th>Tasa λ</th><th>Aceptadas</th>"
+            "<th>Candidatos</th><th>Aceptación obs.</th><th>Teórica</th>"
+            "<th>Candidatos / muestra</th><th>Uniformes / muestra</th>"
+            "</tr></thead>"
+            f"<tbody>{''.join(renglones)}</tbody></table>"
+            "<p class='sub' style='margin:10px 0 0;font-size:.85rem'>"
+            "La propuesta es Exp(λ/2) con envolvente M = 2, así que la aceptación teórica "
+            "es 1/M = 0.5 y hacen falta 2 candidatos por muestra. Cada candidato consume 2 "
+            "uniformes: de ahí las <strong>4 por muestra aceptada</strong>, contra 1 de la "
+            "transformada inversa. Un candidato rechazado es un intento interno del "
+            "generador, <strong>no un vehículo que abandona la gasolinera</strong>."
+            "</p></div>"
+        )
+
+    # --- Rendimiento ---
+    if rendimiento:
+        partes.append("<h3>Tiempo de generación</h3>")
+        renglones = []
+        for fila in sorted(rendimiento, key=lambda f: (f["metodo"], int(f["tamano"]))):
+            renglones.append(
+                f"<tr><td>{fila['metodo']}</td>"
+                f"<td class='num'>{int(float(fila['tamano']))}</td>"
+                f"<td class='num'>{int(float(fila['repeticiones']))}</td>"
+                f"<td class='num'>{float(fila['mediana_s']) * 1000:.3f}</td>"
+                f"<td class='num'>{float(fila['desviacion_s']) * 1000:.3f}</td>"
+                f"<td class='num'>{float(fila['microsegundos_por_muestra']):.3f}</td>"
+                f"<td>{'sí' if str(fila['vectorizado']).lower() == 'true' else 'no'}</td></tr>"
+            )
+        partes.append(
+            "<div class='tarjeta'><table><thead><tr><th>Método</th><th>Muestras</th>"
+            "<th>Repeticiones</th><th>Mediana (ms)</th><th>Desv. (ms)</th>"
+            "<th>µs / muestra</th><th>Vectorizado</th></tr></thead>"
+            f"<tbody>{''.join(renglones)}</tbody></table></div>"
+        )
+
+        desglose = (
+            f"La razón medida es de unas <strong>{razon:.0f}×</strong>, pero "
+            if razon
+            else "La razón medida es grande, pero "
+        )
+        partes.append(
+            "<div class='aviso'><strong>El tiempo medido no es el costo del método</strong>"
+            + desglose
+            + "se compone de dos cosas que conviene no mezclar: un "
+            "<strong>factor intrínseco de unas 4×</strong>, que son los uniformes por "
+            "muestra medidos en la tabla anterior, y el resto, que viene de que "
+            "<strong>la transformada inversa está vectorizada y el método de rechazo "
+            "no</strong>: una opera sobre arreglos completos y la otra recorre un bucle "
+            "muestra por muestra. Afirmar que el método es cientos de veces más lento le "
+            "atribuye un costo que es de la implementación. La razón medida además varía "
+            "entre corridas según la carga de la máquina, por eso se reporta la mediana y "
+            "su dispersión."
+            "</div>"
+        )
+
+    # --- Figuras ---
+    figuras = (
+        (
+            "cdf_generadores.png",
+            "CDF empírica de cada método contra la exponencial teórica. El panel inferior "
+            "muestra la diferencia respecto a la teórica: en el superior las tres curvas se "
+            "superponen.",
+        ),
+        (
+            "rendimiento_generadores.png",
+            "Tiempo de generación por tamaño de muestra, en escala logarítmica. Las dos "
+            "líneas son paralelas: misma complejidad, distinta constante.",
+        ),
+    )
+    for nombre, pie in figuras:
+        datos = _imagen_incrustada(carpeta / nombre)
+        if datos:
+            partes.append(
+                f"<figure><img src='{datos}' alt='{pie}'><figcaption>{pie}</figcaption></figure>"
+            )
+
+    return partes
+
+
+def construir_html(carpeta: Path, carpeta_generadores: Path | None = None) -> str:
+    """Arma el HTML completo a partir de los CSV de una carpeta de resultados.
+
+    Args:
+        carpeta: resultados de ``scripts.ejecutar_experimentos``.
+        carpeta_generadores: resultados de ``scripts.validar_generadores``. Si
+            es ``None`` o no existe, el reporte omite esa comparación.
+    """
     filas = _leer_csv(carpeta / "replicas.csv")
     utilizaciones = _leer_csv(carpeta / "utilizacion.csv")
 
@@ -489,6 +706,9 @@ Generado el {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
                     f"<figcaption>{pie}</figcaption></figure>"
                 )
 
+    if carpeta_generadores is not None:
+        partes.extend(_seccion_generadores(Path(carpeta_generadores)))
+
     partes.append(
         "<footer>Escenarios académicos hipotéticos, no mediciones de campo. "
         "Estudio de horizonte finito con el sistema iniciando vacío: los valores "
@@ -523,6 +743,12 @@ def main() -> None:
         help="Carpeta con replicas.csv, utilizacion.csv y las figuras.",
     )
     parser.add_argument(
+        "--generadores",
+        default=None,
+        help="Carpeta con las salidas de validar_generadores. Por omisión se "
+        "busca una carpeta hermana llamada 'generadores'.",
+    )
+    parser.add_argument(
         "--salida",
         default=None,
         help="Ruta del HTML. Por omisión, reporte.html dentro de --resultados.",
@@ -532,10 +758,24 @@ def main() -> None:
     carpeta = Path(argumentos.resultados)
     salida = Path(argumentos.salida) if argumentos.salida else carpeta / "reporte.html"
 
+    generadores = (
+        Path(argumentos.generadores)
+        if argumentos.generadores
+        else carpeta_generadores_por_omision(carpeta)
+    )
+    incluye = (generadores / "ajuste.csv").is_file()
+
     salida.parent.mkdir(parents=True, exist_ok=True)
-    salida.write_text(construir_html(carpeta), encoding="utf-8")
+    salida.write_text(
+        construir_html(carpeta, generadores if incluye else None), encoding="utf-8"
+    )
 
     print(f"Reporte generado: {salida}")
+    if incluye:
+        print(f"Incluye la comparación de generadores desde: {generadores}")
+    else:
+        print(f"Sin comparación de generadores: no se encontró {generadores / 'ajuste.csv'}")
+        print("Generarla con: python -m scripts.validar_generadores --config ... --salida ...")
     print(f"Abrirlo con:      ii {salida}")
 
 

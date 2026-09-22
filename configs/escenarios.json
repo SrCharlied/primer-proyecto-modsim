@@ -22,5 +22,14 @@
       "tasa_servicio": 0.1,
       "surtidores": 4
     }
-  ]
+  ],
+  "generadores": {
+    "tasas": [0.25, 1.0, 3.0],
+    "cantidad_ajuste": 20000,
+    "cantidad_aceptacion": 50000,
+    "tamanos_rendimiento": [1000, 10000, 100000],
+    "repeticiones_rendimiento": 15,
+    "semilla_raiz": 7,
+    "alpha": 0.05
+  }
 }

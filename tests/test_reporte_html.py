@@ -137,3 +137,99 @@ def test_replica_sin_vehiculos_no_se_vuelve_cero(tmp_path):
 def test_falla_claro_si_falta_el_csv(tmp_path):
     with pytest.raises(FileNotFoundError):
         construir_html(tmp_path)
+
+
+# --- comparacion de generadores -------------------------------------------
+
+
+def _escribir_generadores(carpeta):
+    """Deja en `carpeta` una corrida minima de validar_generadores."""
+    carpeta.mkdir(parents=True, exist_ok=True)
+    (carpeta / "ajuste.csv").write_text(
+        "metodo,tasa,n,media_observada,media_teorica,varianza_observada,"
+        "varianza_teorica,ks_estadistico,p_valor,alpha,rechaza_h0\n"
+        "inversa,1.0,500,0.99,1.0,1.01,1.0,0.02,0.51,0.05,False\n"
+        "rechazo,1.0,500,1.01,1.0,0.99,1.0,0.03,0.33,0.05,False\n",
+        encoding="utf-8",
+    )
+    (carpeta / "aceptacion.csv").write_text(
+        "tasa,muestras_aceptadas,candidatos_generados,tasa_aceptacion_observada,"
+        "tasa_aceptacion_teorica,candidatos_por_muestra,uniformes_por_muestra\n"
+        "1.0,2000,4010,0.4988,0.5,2.005,4.01\n",
+        encoding="utf-8",
+    )
+    (carpeta / "rendimiento.csv").write_text(
+        "metodo,tasa,tamano,repeticiones,mediana_s,media_s,desviacion_s,"
+        "minimo_s,maximo_s,microsegundos_por_muestra,vectorizado\n"
+        "inversa,1.0,1000,5,0.0001,0.0001,0.0,0.0001,0.0002,0.1,True\n"
+        "rechazo,1.0,1000,5,0.0100,0.0100,0.0,0.0090,0.0110,10.0,False\n",
+        encoding="utf-8",
+    )
+
+
+def test_incluye_la_comparacion_de_generadores(tmp_path):
+    _escribir_corrida(tmp_path)
+    gen = tmp_path / "generadores"
+    _escribir_generadores(gen)
+
+    html = construir_html(tmp_path, gen)
+
+    assert "Comparación de los métodos de generación" in html
+    assert "rechazo" in html
+    assert "Kolmog" in html
+    # La tasa de aceptacion y su valor teorico deben aparecer juntos.
+    assert "0.4988" in html
+    assert "1/M" in html
+
+
+def test_omite_los_generadores_si_no_se_corrieron(tmp_path):
+    """El reporte de políticas sigue siendo válido sin esa parte."""
+    _escribir_corrida(tmp_path)
+
+    html = construir_html(tmp_path, tmp_path / "no_existe")
+
+    assert "Comparación de los métodos de generación" not in html
+    assert "Comparación por escenario" in html
+
+
+def test_omite_los_generadores_si_no_se_pasa_la_carpeta(tmp_path):
+    _escribir_corrida(tmp_path)
+    _escribir_generadores(tmp_path / "generadores")
+
+    html = construir_html(tmp_path)
+
+    assert "Comparación de los métodos de generación" not in html
+
+
+def test_declara_que_el_tiempo_no_es_el_costo_del_metodo(tmp_path):
+    """Sin ese desglose, el 100x medido se lee como costo del algoritmo."""
+    _escribir_corrida(tmp_path)
+    gen = tmp_path / "generadores"
+    _escribir_generadores(gen)
+
+    html = construir_html(tmp_path, gen)
+
+    assert "no es el costo del método" in html
+    assert "4&times;" in html or "4×" in html
+    assert "vectoriz" in html
+
+
+def test_aclara_que_un_rechazo_no_es_un_vehiculo_perdido(tmp_path):
+    _escribir_corrida(tmp_path)
+    gen = tmp_path / "generadores"
+    _escribir_generadores(gen)
+
+    html = construir_html(tmp_path, gen)
+
+    assert "no un vehículo que abandona la gasolinera" in html
+
+
+def test_funciona_sin_las_figuras_de_generadores(tmp_path):
+    _escribir_corrida(tmp_path, con_figuras=False)
+    gen = tmp_path / "generadores"
+    _escribir_generadores(gen)
+
+    html = construir_html(tmp_path, gen)
+
+    assert "data:image/png;base64," not in html
+    assert "Comparación de los métodos de generación" in html
