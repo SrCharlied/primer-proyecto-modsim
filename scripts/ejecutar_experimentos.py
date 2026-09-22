@@ -10,6 +10,7 @@ from gasolinera.visualizacion import (
     graficar_espera_media,
     graficar_utilizacion_media,
 )
+from scripts.reporte_html import construir_html
 
 
 def main() -> None:
@@ -50,8 +51,15 @@ def main() -> None:
         carpeta_salida / "utilizacion_media.png",
     )
 
+    # El reporte se arma al final porque incrusta las figuras ya escritas.
+    reporte = carpeta_salida / "reporte.html"
+    reporte.write_text(construir_html(carpeta_salida), encoding="utf-8")
+
     print(f"Experimento terminado: {len(filas)} filas generadas.")
     print(f"Resultados guardados en: {carpeta_salida}")
+    print()
+    print(f"Reporte visual: {reporte}")
+    print(f"Abrirlo con:    ii {reporte}")
 
 
 if __name__ == "__main__":

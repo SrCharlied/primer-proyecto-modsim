@@ -79,12 +79,21 @@ python -m pytest -q
 python -m pytest tests/test_contratos.py tests/test_simulacion.py -q
 ```
 
-Experimento completo: 3 escenarios × 30 réplicas × 2 políticas. Genera
-`replicas.csv`, `utilizacion.csv`, `resumen.csv`, `metadatos.json` y dos
-figuras.
+Experimento completo: 3 escenarios × 30 réplicas × 2 políticas. Genera los CSV,
+`metadatos.json`, dos figuras y un **reporte HTML** con todo junto.
 
 ```powershell
 python -m scripts.ejecutar_experimentos --config configs/escenarios.json --salida resultados/sistema
+ii resultados\sistema\reporte.html
+```
+
+El reporte es **un solo archivo autocontenido**: las figuras van incrustadas y no
+carga nada de internet, así que se abre con doble clic en cualquier computadora y
+sirve para presentar o imprimir a PDF desde el navegador. Para regenerarlo sin
+volver a simular:
+
+```powershell
+python -m scripts.reporte_html --resultados resultados/sistema
 ```
 
 El siguiente comando es una **interfaz por implementar** (Persona 3), no una
@@ -104,7 +113,9 @@ gasolinera/
   validacion.py     Ajuste, tasa de aceptación y rendimiento     [Persona 3]
   experimentos.py   Escenarios, réplicas y exportación           [Persona 4]
   visualizacion.py  Figuras del informe                          [Persona 4]
-scripts/            Puntos de entrada ejecutables
+scripts/
+  ejecutar_experimentos.py  Corre los escenarios y escribe todo   [Persona 4]
+  reporte_html.py           Reporte visual autocontenido          [Persona 1]
 configs/            Escenarios                                   [Persona 4]
 tests/              Pruebas y el caso pequeño calculado a mano
 docs/               Modelo, contratos y documentos por módulo
