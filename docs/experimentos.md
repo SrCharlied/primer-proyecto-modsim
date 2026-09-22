@@ -51,3 +51,6 @@ La diferencia pareada se define como:
 
 ```text
 espera de filas independientes - espera de fila única
+```
+
+Un valor positivo significa que las filas independientes esperan mas.

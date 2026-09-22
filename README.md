@@ -19,18 +19,31 @@ Se responden dos preguntas **independientes**:
 | Hito | Estado |
 |---|---|
 | **A — Base:** estructura, contratos, caso conocido | Listo |
-| **B — Trabajo paralelo:** motor, generadores, validación, experimentos | Motor listo; el resto pendiente |
-| **C — Integración** | Pendiente |
-| **D — Evidencia e informe** | Pendiente |
+| **B — Trabajo paralelo:** motor, generadores, validación, experimentos | Listo |
+| **C — Integración** | Listo |
+| **D — Evidencia e informe** | Resultados listos; informe y documentos en curso |
 
-El **motor está terminado y probado**: `gasolinera/contratos.py` y
-`gasolinera/simulacion.py` implementan las dos políticas y las métricas, con
-100 pruebas en verde. Los módulos `generadores.py`, `validacion.py`,
-`experimentos.py` y `visualizacion.py` son marcadores que indican a quién le
-corresponden.
+**El código está completo y probado**, con **130 pruebas en verde**. Los cinco
+módulos de `gasolinera/` están implementados y el experimento corre de punta a
+punta en aproximadamente 1.5 segundos.
 
-No hay resultados cargados en el repositorio. Cuando los haya, se versionará
-solo evidencia seleccionada junto con su configuración de reproducción.
+Resultado principal: la **fila única** produce menor espera media y menor
+percentil 95 en los tres niveles de demanda, con intervalos del 95 % que
+excluyen el cero. La utilización promedio es prácticamente igual entre las dos
+políticas, así que **no sirve para compararlas**. Los detalles están en
+[`docs/Informe_gasolinera_borrador_revisado.md`](docs/Informe_gasolinera_borrador_revisado.md).
+
+### Pendientes
+
+| Pendiente | Responsable |
+|---|---|
+| `docs/validacion.md` y `scripts/validar_generadores.py` | Diego |
+| Barras de error en las figuras y orden por nivel de demanda | Micaela |
+| `metadatos.json` con versiones y commit; `resumen.csv` con p95 y proporción | Micaela |
+| Trasladar el informe al formato del curso (`docs/Sim.md`) | Todos |
+
+Las salidas de `resultados/` no se versionan: se regeneran con el comando de la
+sección de uso a partir de `configs/escenarios.json`.
 
 ## Instalación (Windows PowerShell)
 
@@ -66,12 +79,19 @@ python -m pytest -q
 python -m pytest tests/test_contratos.py tests/test_simulacion.py -q
 ```
 
-Los siguientes comandos son **interfaces por implementar**, no herramientas
-disponibles todavía:
+Experimento completo: 3 escenarios × 30 réplicas × 2 políticas. Genera
+`replicas.csv`, `utilizacion.csv`, `resumen.csv`, `metadatos.json` y dos
+figuras.
+
+```powershell
+python -m scripts.ejecutar_experimentos --config configs/escenarios.json --salida resultados/sistema
+```
+
+El siguiente comando es una **interfaz por implementar** (Persona 3), no una
+herramienta disponible todavía:
 
 ```powershell
 python -m scripts.validar_generadores --config configs/escenarios.json --salida resultados/generadores
-python -m scripts.ejecutar_experimentos --config configs/escenarios.json --salida resultados/sistema
 ```
 
 ## Estructura
@@ -95,11 +115,14 @@ resultados/         Salidas generadas (ignoradas por git)
 
 | Documento | Contenido |
 |---|---|
+| [`docs/Informe_gasolinera_borrador_revisado.md`](docs/Informe_gasolinera_borrador_revisado.md) | **Informe completo:** planteamiento, modelo, métodos, resultados medidos, análisis y conclusiones. Es el texto que se traslada a `docs/Sim.md`. |
+| [`docs/Sim.md`](docs/Sim.md) | Informe en el formato del curso. Se trabaja en Word Online; esta copia es una instantánea. |
 | [`docs/modelo.md`](docs/modelo.md) | Supuestos, unidades, reglas de cierre, las dos políticas, métricas y el caso conocido con su derivación paso a paso. |
 | [`docs/contratos.md`](docs/contratos.md) | Firmas, tipos y reglas que comparten los cuatro módulos. |
+| [`docs/generadores.md`](docs/generadores.md) | Derivación y algoritmos de los dos métodos de generación. |
+| [`docs/experimentos.md`](docs/experimentos.md) | Configuración, reproducibilidad y archivos de salida. |
 
-Faltan `generadores.md`, `validacion.md`, `experimentos.md` e `informe.md`,
-que escribe cada responsable.
+Falta `docs/validacion.md`, que escribe Persona 3.
 
 ## Reparto
 
