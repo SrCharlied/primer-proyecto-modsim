@@ -1,0 +1,26 @@
+{
+  "semilla_raiz": 2026,
+  "replicas": 30,
+  "horizonte": 480.0,
+  "metodo": "inversa",
+  "escenarios": [
+    {
+      "nombre": "demanda_baja",
+      "tasa_llegadas": 0.2,
+      "tasa_servicio": 0.1,
+      "surtidores": 4
+    },
+    {
+      "nombre": "demanda_media",
+      "tasa_llegadas": 0.3,
+      "tasa_servicio": 0.1,
+      "surtidores": 4
+    },
+    {
+      "nombre": "demanda_alta",
+      "tasa_llegadas": 0.38,
+      "tasa_servicio": 0.1,
+      "surtidores": 4
+    }
+  ]
+}
