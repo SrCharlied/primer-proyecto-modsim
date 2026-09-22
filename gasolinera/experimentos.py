@@ -6,6 +6,7 @@ entradas para ambas politicas en cada replica.
 """
 import json
 from pathlib import Path
+from collections import defaultdict
 
 import numpy as np
 import csv
@@ -168,6 +169,54 @@ def ejecutar_experimentos(config: dict) -> tuple[list[dict], list[dict]]:
 
     return filas, utilizaciones
 
+def resumir_resultados(filas: list[dict]) -> list[dict]:
+    """Calcula diferencias pareadas de espera entre políticas."""
+    grupos = defaultdict(dict)
+
+    for fila in filas:
+        clave = (fila["escenario"], fila["replica"])
+        grupos[clave][fila["politica"]] = fila["espera_media"]
+
+    diferencias_por_escenario = defaultdict(list)
+
+    for (escenario, _), politicas in grupos.items():
+        unica = politicas.get("unica")
+        independientes = politicas.get("independientes")
+
+        if unica is not None and independientes is not None:
+            diferencia = float(independientes) - float(unica)
+            diferencias_por_escenario[escenario].append(diferencia)
+
+    resumen = []
+
+    for escenario in sorted(diferencias_por_escenario):
+        diferencias = np.asarray(
+            diferencias_por_escenario[escenario],
+            dtype=float,
+        )
+        cantidad = len(diferencias)
+        promedio = float(np.mean(diferencias))
+
+        if cantidad > 1:
+            error_estandar = float(
+                np.std(diferencias, ddof=1) / np.sqrt(cantidad)
+            )
+            margen = 1.96 * error_estandar
+        else:
+            margen = 0.0
+
+        resumen.append(
+            {
+                "escenario": escenario,
+                "replicas_pareadas": cantidad,
+                "diferencia_espera_media": promedio,
+                "ic95_inferior": promedio - margen,
+                "ic95_superior": promedio + margen,
+            }
+        )
+
+    return resumen
+
 def guardar_resultados(
     filas: list[dict],
     utilizaciones: list[dict],
@@ -219,6 +268,28 @@ def guardar_resultados(
         )
         escritor.writeheader()
         escritor.writerows(utilizaciones)
+    
+        resumen = resumir_resultados(filas)
+
+    columnas_resumen = [
+        "escenario",
+        "replicas_pareadas",
+        "diferencia_espera_media",
+        "ic95_inferior",
+        "ic95_superior",
+    ]
+
+    with (carpeta_salida / "resumen.csv").open(
+        "w",
+        newline="",
+        encoding="utf-8",
+    ) as archivo:
+        escritor = csv.DictWriter(
+            archivo,
+            fieldnames=columnas_resumen,
+        )
+        escritor.writeheader()
+        escritor.writerows(resumen)
 
     with (carpeta_salida / "metadatos.json").open(
         "w",

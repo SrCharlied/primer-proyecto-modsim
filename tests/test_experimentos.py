@@ -144,5 +144,6 @@ def test_guardar_resultados_crea_archivos(tmp_path):
 
     assert (tmp_path / "replicas.csv").exists()
     assert (tmp_path / "utilizacion.csv").exists()
+    assert (tmp_path / "resumen.csv").exists()
     assert (tmp_path / "metadatos.json").exists()
     
